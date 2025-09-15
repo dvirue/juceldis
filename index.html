@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Alternativas MercadoLibre</title>
+</head>
+<body>
+  <h2>Registrar publicación</h2>
+  <input id="linkOriginal" placeholder="Pega link de ML" size="60">
+  <button onclick="guardarPublicacion()">Guardar</button>
+  <p id="pubIdMsg"></p>
+
+  <hr>
+
+  <h2>Agregar alternativa</h2>
+  <input id="pubId" placeholder="ID de la publicación" size="40"><br><br>
+  <input id="alias" placeholder="Tu nombre o alias" size="40"><br><br>
+  <input id="linkAlt" placeholder="Link alternativo" size="60"><br><br>
+  <input id="comentario" placeholder="Comentario (opcional)" size="60"><br><br>
+  <button onclick="agregarAlternativa()">Guardar alternativa</button>
+
+  <hr>
+
+  <h2>Ver alternativas</h2>
+  <input id="pubIdVer" placeholder="ID de publicación" size="40">
+  <button onclick="verAlternativas()">Buscar</button>
+  <ul id="listaAlt"></ul>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, doc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+    // 🔑 Tu configuración de Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyC5Eik4d1FWygjsIcJiWlQMUWUOCJrZbP4",
+      authDomain: "juceldis.firebaseapp.com",
+      projectId: "juceldis",
+      storageBucket: "juceldis.firebasestorage.app",
+      messagingSenderId: "935987309145",
+      appId: "1:935987309145:web:c932222ce8172e0ca81f48",
+      measurementId: "G-YV245C6XQV"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 👉 Guardar publicación
+    async function guardarPublicacion() {
+      const link = document.getElementById("linkOriginal").value;
+      if (!link) return alert("Pegá un link válido");
+
+      const docRef = await addDoc(collection(db, "publicaciones"), {
+        link,
+        fecha: new Date().toISOString()
+      });
+
+      document.getElementById("pubIdMsg").innerText = "Publicación guardada con ID: " + docRef.id;
+      document.getElementById("pubId").value = docRef.id; // autocompleta para agregar alternativa
+    }
+
+    // 👉 Guardar alternativa
+    async function agregarAlternativa() {
+      const pubId = document.getElementById("pubId").value;
+      const alias = document.getElementById("alias").value;
+      const linkAlt = document.getElementById("linkAlt").value;
+      const comentario = document.getElementById("comentario").value;
+
+      if (!pubId || !alias || !linkAlt) return alert("Faltan datos");
+
+      const altRef = collection(db, "publicaciones", pubId, "alternativas");
+      await addDoc(altRef, {
+        alias,
+        linkAlternativo: linkAlt,
+        comentario,
+        fecha: new Date().toISOString()
+      });
+
+      alert("Alternativa guardada!");
+    }
+
+    // 👉 Ver alternativas
+    async function verAlternativas() {
+      const pubId = document.getElementById("pubIdVer").value;
+      if (!pubId) return alert("Ingresá un ID de publicación");
+
+      const q = query(collection(db, "publicaciones", pubId, "alternativas"), orderBy("fecha", "desc"));
+      const snapshot = await getDocs(q);
+
+      const lista = document.getElementById("listaAlt");
+      lista.innerHTML = "";
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const li = document.createElement("li");
+        li.innerHTML = `<b>${data.alias}</b> → <a href="${data.linkAlternativo}" target="_blank">${data.linkAlternativo}</a> (${data.comentario || "sin comentario"})`;
+        lista.appendChild(li);
+      });
+
+      if (snapshot.empty) {
+        lista.innerHTML = "<li>No hay alternativas cargadas aún.</li>";
+      }
+    }
+  </script>
+</body>
+</html>
